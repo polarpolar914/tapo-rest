@@ -36,8 +36,8 @@ impl Sessions {
         self.map.read().await.get(id).cloned()
     }
 
-    pub async fn insert(&self) -> Result<String> {
-        let session = Session {};
+    pub async fn insert(&self, email: String) -> Result<String> {
+        let session = Session { email };
 
         let id = Self::_gen_session_id();
 
@@ -75,6 +75,7 @@ impl Sessions {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Session {
+    pub email: String,
     // TODO: permissions? only access to specific bulbs, etc.?
 }
 

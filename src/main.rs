@@ -23,6 +23,7 @@ mod config;
 mod devices;
 mod logger;
 mod server;
+mod scheduler;
 
 #[tokio::main]
 async fn main() -> ExitCode {
@@ -102,5 +103,12 @@ async fn inner_main() -> Result<()> {
 
     info!("Now launching server...");
 
-    server::serve(server_config, devices, data_dir.join("sessions.json")).await
+    server::serve(
+        server_config,
+        devices,
+        data_dir.join("sessions.json"),
+        data_dir.join("schedules.json"),
+        data_dir.join("schedule.log"),
+    )
+    .await
 }

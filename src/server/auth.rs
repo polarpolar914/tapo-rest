@@ -14,13 +14,14 @@ use super::{
 
 #[derive(Deserialize)]
 pub struct LoginData {
+    email: String,
     password: String,
 }
 
 // TODO: fail2ban? rate limiting?
 pub async fn login(
     State(state): State<SharedState>,
-    Json(LoginData { password }): Json<LoginData>,
+    Json(LoginData { email, password }): Json<LoginData>,
 ) -> ApiResult<String> {
     if password != state.auth_password {
         return Err(ApiError::new(
@@ -29,7 +30,7 @@ pub async fn login(
         ));
     }
 
-    let session_id = state.sessions.insert().await?;
+    let session_id = state.sessions.insert(email).await?;
 
     Ok(session_id)
 }
