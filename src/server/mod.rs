@@ -15,13 +15,20 @@ use crate::{
     server::actions::make_router,
 };
 
-use self::{sessions::refresh_session, state::StateData};
+use self::{
+    sessions::refresh_session,
+    state::StateData,
+    schedules::{scheduler_loop},
+    schedules_api::router as schedules_router,
+};
 
 mod actions;
 mod auth;
 mod errors;
 mod sessions;
 mod state;
+mod schedules;
+mod schedules_api;
 
 pub use actions::TapoDeviceType;
 pub use errors::{ApiError, ApiResult};
@@ -32,6 +39,8 @@ pub async fn serve(
     config: ServerConfig,
     devices: Vec<TapoDevice>,
     sessions_file: PathBuf,
+    schedules_file: PathBuf,
+    schedule_log: PathBuf,
 ) -> Result<()> {
     let ServerConfig { port, password } = config;
 
@@ -67,20 +76,26 @@ pub async fn serve(
             AllowOrigin::any(),
         );
 
+    let state = Arc::new(
+        StateData::init(
+            auth_password,
+            devices,
+            sessions_file,
+            schedules_file,
+            schedule_log,
+        )
+        .await?,
+    );
+
+    tokio::spawn(scheduler_loop(state.clone()));
+
     let app = Router::new()
         .route("/login", post(auth::login))
         .route("/refresh-session", get(refresh_session))
         .nest("/actions", make_router())
+        .merge(schedules_router())
         .layer(cors)
-        .with_state(Arc::new(
-            StateData::init(
-                // TODO: hash?
-                auth_password,
-                devices,
-                sessions_file,
-            )
-            .await?,
-        ));
+        .with_state(state);
 
     let addr = format!("0.0.0.0:{port}");
 
